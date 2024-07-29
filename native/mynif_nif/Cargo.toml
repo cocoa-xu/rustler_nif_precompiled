@@ -1,0 +1,24 @@
+[package]
+name = "mynif_nif"
+version = "0.1.0"
+authors = []
+edition = "2021"
+
+[lib]
+name = "mynif_nif"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.34.0"
+gst = { version = "0.22", package = "gstreamer" }
+gst-app = { version = "0.22", package = "gstreamer-app" }
+gst-plugin-webrtc = "=0.12.5"
+gstreamer-webrtc = "0.22.0"
+gstreamer-video = "0.22.4"
+gstreamer-sdp = "0.22.0"
+livekit-protocol = "=0.3.2"
+log = "0.4.22"
+
+[profile.release]
+debug = true

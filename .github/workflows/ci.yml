@@ -1,0 +1,72 @@
+name: Build Sidecar
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "sidecar/**/*"
+      - ".github/workflows/build-sidecar.yml"
+    branches:
+      - main
+
+defaults:
+  run:
+    working-directory: ./sidecar
+
+jobs:
+  GStreamerNIF:
+    name: GStreamer Rust NIF
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Sidecar GStreamer Rust NIF version
+        id: gstreamer-nif
+        shell: bash
+        run: |
+          # Get the version from mix.exs
+          NIF_VERSION=$(sed -n 's/^  @version "\(.*\)"/\1/p' mix.exs | head -n1)
+          echo "version=${NIF_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Check if has precompiled Sidecar GStreamer Rust NIF
+        uses: mukunku/tag-exists-action@v1.5.0
+        id: check-precompiled-nif
+        with: 
+          tag: gstreamer-nif-v${{ steps.gstreamer-nif.outputs.version }}
+
+      - name: Install GStreamer
+        if: steps.check-precompiled-nif.outputs.exists == 'false'
+        uses: blinemedical/setup-gstreamer@v1.4.0
+        with:
+          version: "1.22.7"
+          arch: "x86_64"
+
+      - name: Install Rust toolchain
+        if: steps.check-precompiled-nif.outputs.exists == 'false'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: "aarch64-unknown-linux-gnu"
+
+      - name: Build the project
+        id: build-crate
+        if: steps.check-precompiled-nif.outputs.exists == 'false'
+        uses: philss/rustler-precompiled-action@v1.1.4
+        with:
+          project-name: sidecar_gstreamer
+          project-version: ${{ steps.gstreamer-nif.outputs.version }}
+          target: "aarch64-unknown-linux-gnu"
+          nif-version: "2.15"
+          use-cross: true
+          project-dir: "sidecar/native"
+
+      - name: Publish archives and packages
+        if: steps.check-precompiled-nif.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: gstreamer-nif-v${{ steps.gstreamer-nif.outputs.version }}
+          tag_name: gstreamer-nif-v${{ steps.gstreamer-nif.outputs.version }}
+          files: |
+            ${{ steps.build-crate.outputs.file-path }}
