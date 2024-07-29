@@ -1,11 +1,8 @@
-name: Build Sidecar
+name: Build
 
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "sidecar/**/*"
-      - ".github/workflows/build-sidecar.yml"
     branches:
       - main
 
